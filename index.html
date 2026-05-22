@@ -174,7 +174,10 @@
   <div class="editor-panel">
     <div class="editor-header">
       <h2>✏️ Editor de Ruta</h2>
-      <button class="editor-close" onclick="closeEditor()">✕</button>
+      <div style="display:flex;gap:6px;">
+        <button class="editor-close" onclick="resetData()" title="Borrar todo y volver al inicio" style="background:rgba(239,68,68,0.2);font-size:12px;padding:6px 10px;">🗑 Reset</button>
+        <button class="editor-close" onclick="closeEditor()">✕</button>
+      </div>
     </div>
 
     <!-- Global settings -->
@@ -203,7 +206,27 @@
   </div>
 </div>
 
-<script>
+<script type="module">
+// ============================================================
+// 🔥 FIREBASE CONFIG — PEGA AQUÍ TU CONFIGURACIÓN DE FIREBASE
+// ============================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyBqzbrWKNQQ0EChBxNzAM5meP1uy_7EtKI",
+  authDomain:        "pollada-9d6b1.firebaseapp.com",
+  projectId:         "pollada-9d6b1",
+  storageBucket:     "pollada-9d6b1.firebasestorage.app",
+  messagingSenderId: "540067812713",
+  appId:             "1:540067812713:web:37d13c8bcac7831af159f8"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+const DOC = doc(db, 'ruta', 'dia');   // colección: ruta / documento: dia
+
+// ========== ESTADO ==========
 // ========== DATA ==========
 let routeData = {
   fecha: '15/05/2026',
@@ -266,8 +289,56 @@ let routeData = {
   ]
 };
 
-const done = {};
+let done = {};
 let nextId = 100;
+let _listening = false;   // evita bucles al actualizar desde Firestore
+
+// ========== FIREBASE: GUARDAR ==========
+async function saveToFirebase() {
+  try {
+    await setDoc(DOC, { routeData, done });
+  } catch(e) {
+    console.error('Error guardando:', e);
+    showToast('⚠️ Error al guardar. Revisa tu conexión.', true);
+  }
+}
+
+// ========== FIREBASE: ESCUCHAR EN TIEMPO REAL ==========
+function startListening() {
+  if (_listening) return;
+  _listening = true;
+  onSnapshot(DOC, (snap) => {
+    if (!snap.exists()) {
+      // Primera vez: subir datos iniciales
+      saveToFirebase();
+      return;
+    }
+    const data = snap.data();
+    routeData = data.routeData;
+    done = data.done || {};
+    nextId = Math.max(100, ...routeData.clients.map(c => Number(c.id) || 0)) + 1;
+    renderRoute();
+  }, (err) => {
+    console.error('Error escuchando:', err);
+    showToast('⚠️ Sin conexión a la base de datos.', true);
+  });
+}
+
+// ========== TOAST ==========
+function showToast(msg, isError = false) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1a1f2e;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;transition:opacity 0.3s;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.background = isError ? '#7f1d1d' : '#0F6E56';
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; }, 3000);
+}
 
 // ========== RENDER ROUTE ==========
 function totalPorciones(clients) {
@@ -383,6 +454,15 @@ function markDone(id, total) {
   const pend = routeData.clients.length - Object.keys(done).length;
   document.getElementById('pendCount').textContent = pend;
   document.getElementById('pendText').textContent = pend + (pend === 1 ? ' entrega' : ' entregas');
+  saveToFirebase();
+  showToast('✅ Entrega marcada y guardada');
+}
+
+function resetData() {
+  if (!confirm('¿Borrar todos los cambios y volver a los datos originales?')) return;
+  done = {};
+  saveToFirebase();
+  showToast('🔄 Datos reseteados');
 }
 
 // ========== EDITOR ==========
@@ -553,6 +633,8 @@ function addClient() {
 function applyAndClose() {
   routeData.fecha = document.getElementById('cfgFecha').value.trim() || routeData.fecha;
   routeData.inicio = document.getElementById('cfgInicio').value.trim() || routeData.inicio;
+  saveToFirebase();
+  showToast('💾 Cambios guardados para todos');
   closeEditor();
   renderRoute();
 }
@@ -562,8 +644,22 @@ document.getElementById('editorOverlay').addEventListener('click', function(e) {
   if (e.target === this) closeEditor();
 });
 
-// Init
-renderRoute();
+// Expose functions to global scope (needed because of type="module")
+window.toggleMap = toggleMap;
+window.markDone = markDone;
+window.openEditor = openEditor;
+window.closeEditor = closeEditor;
+window.applyAndClose = applyAndClose;
+window.addClient = addClient;
+window.addPorcion = addPorcion;
+window.removePorcion = removePorcion;
+window.deleteClient = deleteClient;
+window.toggleClientEditor = toggleClientEditor;
+window.resetData = resetData;
+
+// Init — conectar a Firebase y escuchar cambios en tiempo real
+showToast('🔄 Conectando...');
+startListening();
 </script>
 </body>
 </html>
