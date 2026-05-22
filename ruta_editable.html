@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ruta de Entregas — Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #1D9E75; --green-light: #E1F5EE; --green-dark: #0F6E56;
+    --text: #1a1a1a; --text-muted: #6b7280; --text-faint: #9ca3af;
+    --border: rgba(0,0,0,0.10); --bg: #f5f4f0; --card: #ffffff; --wa: #25D366;
+    --waze: #33ccff; --red: #ef4444; --red-light: #fee2e2;
+    --editor-bg: #1a1f2e; --editor-card: #252b3b; --editor-border: rgba(255,255,255,0.08);
+  }
+
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 3rem; }
+
+  /* ===== TOP BAR ===== */
+  .top-bar { background: var(--green-dark); color: #fff; padding: 1.1rem 1.25rem 1rem; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; }
+  .top-bar-left { display: flex; align-items: center; gap: 10px; }
+  .top-bar svg { width: 22px; height: 22px; fill: #fff; }
+  .top-bar-title { font-size: 16px; font-weight: 600; }
+  .top-bar-date { font-size: 12px; font-family: 'DM Mono', monospace; opacity: 0.75; }
+  .edit-fab { background: rgba(255,255,255,0.18); border: none; color: #fff; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; font-family: 'DM Sans', sans-serif; transition: background 0.15s; }
+  .edit-fab:hover { background: rgba(255,255,255,0.28); }
+
+  /* ===== HERO ===== */
+  .hero { background: var(--green-dark); padding: 0 1.25rem 1.5rem; display: flex; gap: 0.6rem; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; }
+  .hero-stat { background: rgba(255,255,255,0.12); border-radius: 12px; padding: 0.75rem 0.4rem; flex: 1; text-align: center; }
+  .hero-stat-num { font-size: 24px; font-weight: 600; color: #fff; line-height: 1; }
+  .hero-stat-label { font-size: 9px; color: rgba(255,255,255,0.7); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); padding: 1.25rem 1.25rem 0.5rem; }
+
+  /* ===== CARDS ===== */
+  .card { background: var(--card); border-radius: 16px; margin: 0 1rem 1rem; overflow: hidden; border: 1px solid var(--border); animation: slideUp 0.35s ease both; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  .card-head { display: flex; align-items: center; padding: 0.9rem 1.1rem 0.7rem; gap: 11px; }
+  .stop-num { width: 34px; height: 34px; border-radius: 50%; background: var(--green-light); color: var(--green-dark); font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .client-info { flex: 1; min-width: 0; }
+  .client-name { font-size: 15px; font-weight: 600; color: var(--text); }
+  .client-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .time-chip { background: var(--green-light); color: var(--green-dark); font-size: 11.5px; font-weight: 600; padding: 4px 9px; border-radius: 20px; font-family: 'DM Mono', monospace; flex-shrink: 0; }
+
+  .divider { height: 1px; background: var(--border); margin: 0 1.1rem; }
+
+  .card-actions { display: flex; align-items: center; padding: 0.65rem 1.1rem; gap: 8px; flex-wrap: wrap; }
+  .phone-tag { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); flex: 1; min-width: 120px; }
+  .phone-tag svg { width: 13px; height: 13px; flex-shrink: 0; }
+  .phone-num { color: var(--text); font-weight: 500; font-family: 'DM Mono', monospace; font-size: 12px; }
+  .porciones-tag { background: #FEF3C7; color: #92400E; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; flex-shrink: 0; }
+  .btn-wa { display: inline-flex; align-items: center; gap: 5px; background: var(--wa); color: #fff; border: none; border-radius: 10px; padding: 8px 13px; font-size: 12.5px; font-weight: 600; cursor: pointer; text-decoration: none; font-family: 'DM Sans', sans-serif; transition: transform 0.12s, opacity 0.12s; flex-shrink: 0; }
+  .btn-wa:active { transform: scale(0.96); opacity: 0.9; }
+  .btn-wa svg { width: 14px; height: 14px; fill: #fff; }
+
+  .map-toggle { width: 100%; background: none; border: none; border-top: 1px solid var(--border); padding: 0.65rem 1.1rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; color: var(--text-muted); font-size: 12.5px; font-family: 'DM Sans', sans-serif; transition: background 0.15s; }
+  .map-toggle:hover { background: #f9f9f7; }
+  .map-toggle-left { display: flex; align-items: center; gap: 7px; }
+  .chevron { width: 15px; height: 15px; transition: transform 0.2s; }
+  .chevron.open { transform: rotate(180deg); }
+  .btn-waze { padding: 7px 12px; background: var(--waze); color: #000; text-decoration: none; border-radius: 8px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+  .map-wrap { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
+  .map-wrap.open { max-height: 260px; border-top: 1px solid var(--border); }
+  .map-wrap iframe { width: 100%; height: 260px; border: none; display: block; }
+
+  .card.done { opacity: 0.52; }
+  .check-btn { width: 100%; background: none; border: none; border-top: 1px solid var(--border); padding: 0.6rem 1.1rem; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; color: var(--green-dark); font-size: 12.5px; font-weight: 600; font-family: 'DM Sans', sans-serif; transition: background 0.15s; }
+  .check-btn:hover { background: var(--green-light); }
+  .check-btn svg { width: 14px; height: 14px; }
+
+  .footer-status { margin: 0.5rem 1rem 0; padding: 0.85rem 1rem; background: var(--card); border-radius: 12px; border: 1px solid var(--border); display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-muted); }
+  .pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--green); flex-shrink: 0; animation: pulse 2s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(29,158,117,0.4); } 70% { box-shadow: 0 0 0 8px rgba(29,158,117,0); } 100% { box-shadow: 0 0 0 0 rgba(29,158,117,0); } }
+
+  .info-card { margin: 1rem 1rem 0; background: #FEF9EC; border: 1px solid #F5D97A; border-radius: 12px; padding: 0.85rem 1rem; font-size: 12.5px; color: #7A5F10; line-height: 1.6; }
+  .info-card strong { display: block; font-size: 13px; margin-bottom: 4px; color: #5a4508; }
+
+  /* ===== EDITOR OVERLAY ===== */
+  .editor-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); overflow-y: auto; padding: 1rem; }
+  .editor-overlay.open { display: block; }
+  .editor-panel { background: var(--editor-bg); border-radius: 20px; max-width: 520px; margin: 0 auto; padding: 1.5rem; color: #e2e8f0; }
+  .editor-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+  .editor-header h2 { font-size: 17px; font-weight: 600; color: #fff; }
+  .editor-close { background: rgba(255,255,255,0.1); border: none; color: #fff; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 16px; line-height: 1; }
+  .editor-close:hover { background: rgba(255,255,255,0.2); }
+
+  /* Global config */
+  .editor-section { background: var(--editor-card); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; border: 1px solid var(--editor-border); }
+  .editor-section h3 { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 0.75rem; }
+  .field-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .field-row:last-child { margin-bottom: 0; }
+  .field-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 120px; }
+  .field-group label { font-size: 11px; color: #94a3b8; font-weight: 500; }
+  .field-group input, .field-group select { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; color: #e2e8f0; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 7px 10px; width: 100%; outline: none; transition: border-color 0.15s; }
+  .field-group input:focus, .field-group select:focus { border-color: var(--green); }
+  .field-group select option { background: #252b3b; }
+
+  /* Client cards in editor */
+  .client-editor { background: var(--editor-card); border-radius: 12px; border: 1px solid var(--editor-border); margin-bottom: 10px; overflow: hidden; }
+  .client-editor-head { display: flex; align-items: center; justify-content: space-between; padding: 0.8rem 1rem; cursor: pointer; gap: 8px; }
+  .client-editor-num { width: 26px; height: 26px; border-radius: 50%; background: var(--green-dark); color: #fff; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .client-editor-name { flex: 1; font-size: 14px; font-weight: 600; color: #fff; }
+  .client-editor-toggle { color: #94a3b8; font-size: 18px; line-height: 1; transition: transform 0.2s; }
+  .client-editor-toggle.open { transform: rotate(180deg); }
+  .client-editor-body { display: none; padding: 0 1rem 1rem; border-top: 1px solid var(--editor-border); }
+  .client-editor-body.open { display: block; }
+
+  /* Porciones section in editor */
+  .porciones-editor { background: rgba(255,255,255,0.04); border-radius: 8px; padding: 0.7rem; margin-top: 8px; }
+  .porciones-editor-label { font-size: 11px; color: #94a3b8; font-weight: 500; margin-bottom: 6px; }
+  .porciones-list { display: flex; flex-direction: column; gap: 6px; }
+  .porcion-row { display: flex; gap: 6px; align-items: center; }
+  .porcion-row input[type="number"] { width: 60px; flex-shrink: 0; }
+  .porcion-row select { flex: 1; }
+  .btn-remove-porcion { background: var(--red-light); border: none; color: var(--red); border-radius: 6px; padding: 6px 8px; cursor: pointer; font-size: 13px; font-weight: 600; line-height: 1; flex-shrink: 0; }
+  .btn-add-porcion { background: rgba(29,158,117,0.15); border: 1px dashed rgba(29,158,117,0.4); color: var(--green); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 12px; font-weight: 600; font-family: 'DM Sans', sans-serif; width: 100%; margin-top: 6px; transition: background 0.15s; }
+  .btn-add-porcion:hover { background: rgba(29,158,117,0.25); }
+
+  .btn-delete-client { background: var(--red-light); border: 1px solid rgba(239,68,68,0.3); color: var(--red); border-radius: 8px; padding: 7px 12px; cursor: pointer; font-size: 12px; font-weight: 600; font-family: 'DM Sans', sans-serif; width: 100%; margin-top: 10px; transition: background 0.15s; }
+  .btn-delete-client:hover { background: #fca5a5; }
+
+  .btn-add-client { background: rgba(29,158,117,0.12); border: 1px dashed rgba(29,158,117,0.5); color: var(--green); border-radius: 10px; padding: 10px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; width: 100%; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.15s; }
+  .btn-add-client:hover { background: rgba(29,158,117,0.22); }
+
+  .editor-apply { background: var(--green); border: none; color: #fff; border-radius: 10px; padding: 12px; cursor: pointer; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; width: 100%; margin-top: 1rem; transition: background 0.15s; }
+  .editor-apply:hover { background: var(--green-dark); }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div class="top-bar-left">
+    <svg viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+    <span class="top-bar-title">Ruta de Entregas</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span class="top-bar-date" id="topBarDate">15/05/2026</span>
+    <button class="edit-fab" onclick="openEditor()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Editar
+    </button>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-stat"><div class="hero-stat-num" id="heroEntregas">0</div><div class="hero-stat-label">Entregas</div></div>
+  <div class="hero-stat"><div class="hero-stat-num" id="heroPorciones">0</div><div class="hero-stat-label">Porciones</div></div>
+  <div class="hero-stat"><div class="hero-stat-num" id="heroInicio">9:00</div><div class="hero-stat-label">Inicio</div></div>
+  <div class="hero-stat"><div class="hero-stat-num" id="pendCount">0</div><div class="hero-stat-label">Pendientes</div></div>
+</div>
+
+<p class="section-label" id="sectionLabel">Paradas del día</p>
+
+<div id="cards-container"></div>
+
+<div class="footer-status">
+  <div class="pulse"></div>
+  <span>Ruta activa — <strong id="pendText">0 entregas</strong> pendientes hoy</span>
+</div>
+
+<div class="info-card">
+  <strong>💡 Instrucciones para el courier</strong>
+  Toca el botón verde de WhatsApp para coordinar con cada cliente antes de llegar. Abre el mapa para ver la ubicación exacta. Al entregar, toca "Marcar como entregado".
+</div>
+
+<!-- ===== EDITOR OVERLAY ===== -->
+<div class="editor-overlay" id="editorOverlay">
+  <div class="editor-panel">
+    <div class="editor-header">
+      <h2>✏️ Editor de Ruta</h2>
+      <button class="editor-close" onclick="closeEditor()">✕</button>
+    </div>
+
+    <!-- Global settings -->
+    <div class="editor-section">
+      <h3>Configuración General</h3>
+      <div class="field-row">
+        <div class="field-group">
+          <label>Fecha</label>
+          <input type="text" id="cfgFecha" placeholder="23/05/2026">
+        </div>
+        <div class="field-group">
+          <label>Hora inicio</label>
+          <input type="text" id="cfgInicio" placeholder="9:00">
+        </div>
+      </div>
+    </div>
+
+    <!-- Clients list in editor -->
+    <div class="editor-section">
+      <h3>Clientes</h3>
+      <div id="clientsEditor"></div>
+      <button class="btn-add-client" onclick="addClient()">+ Agregar cliente</button>
+    </div>
+
+    <button class="editor-apply" onclick="applyAndClose()">✅ Aplicar cambios</button>
+  </div>
+</div>
+
+<script>
+// ========== DATA ==========
+let routeData = {
+  fecha: '15/05/2026',
+  inicio: '9:00',
+  clients: [
+    {
+      id: 1,
+      name: 'Mady y Heber',
+      phone: '51981492571',
+      time: '05:45 a.m.',
+      wazeUrl: 'https://ul.waze.com/ul?ll=-11.87292610%2C-77.12608337&navigate=yes&zoom=17',
+      mapsEmbed: '',
+      porciones: [{ cantidad: 20, tipo: 'mixto' }]
+    },
+    {
+      id: 2,
+      name: 'Johnny Camarena',
+      phone: '51997111800',
+      time: '12:30 p.m.',
+      wazeUrl: 'https://ul.waze.com/ul?ll=-11.92876618%2C-77.09418654&navigate=yes&zoom=17',
+      mapsEmbed: '',
+      porciones: [{ cantidad: 6, tipo: 'mixto' }]
+    },
+    {
+      id: 3,
+      name: 'Johnny Camarena (2do)',
+      phone: '51997111800',
+      time: '12:30 p.m.',
+      wazeUrl: 'https://ul.waze.com/ul?ll=-12.06729304%2C-76.98193073&navigate=yes&zoom=17',
+      mapsEmbed: '',
+      porciones: [{ cantidad: 19, tipo: 'pechos' }, { cantidad: 2, tipo: 'piernas' }]
+    },
+    {
+      id: 4,
+      name: 'Rosaura Gomez',
+      phone: '51997552634',
+      time: '09:30 a.m.',
+      wazeUrl: 'https://waze.com/ul?ll=-11.957034,-77.041660&navigate=yes',
+      mapsEmbed: 'https://www.google.com/maps/embed?pb=!4v1778816793181!6m8!1m7!1sGN90DrXp5jZZzfQ922ayIg!2m2!1d-11.957033976845831!2d-77.041659572296521!3f126.97105!4f0!5f0.7820865974627469',
+      porciones: [{ cantidad: 2, tipo: 'mixto' }]
+    },
+    {
+      id: 5,
+      name: 'Deisi Yupanqui',
+      phone: '51992366551',
+      time: '10:00 a.m.',
+      wazeUrl: 'https://waze.com/ul?ll=-11.949488,-77.059576&navigate=yes',
+      mapsEmbed: 'https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d15613.331698886177!2d-77.05605325766047!3d-11.951436114397959!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMTHCsDU2JzU4LjIiUyA3N8KwMDMnMzQuOCJX!5e0!3m2!1ses!2spe!4v1778881687283!5m2!1ses!2spe',
+      porciones: [{ cantidad: 1, tipo: 'mixto' }]
+    },
+    {
+      id: 6,
+      name: 'Mabel Alcahuamán',
+      phone: '51986745085',
+      time: '11:00 a.m.',
+      wazeUrl: 'https://waze.com/ul?ll=-11.898519,-77.056803&navigate=yes',
+      mapsEmbed: 'https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3904.094337234874!2d-77.05680302494129!3d-11.898519188326773!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMTHCsDUzJzU0LjciUyA3N8KwMDMnMjUuNyJX!5e0!3m2!1ses!2spe!4v1778817019065!5m2!1ses!2spe',
+      porciones: [{ cantidad: 1, tipo: 'mixto' }]
+    }
+  ]
+};
+
+const done = {};
+let nextId = 100;
+
+// ========== RENDER ROUTE ==========
+function totalPorciones(clients) {
+  return clients.reduce((sum, c) => sum + c.porciones.reduce((s, p) => s + Number(p.cantidad), 0), 0);
+}
+
+function porcionesLabel(porciones) {
+  return porciones.map(p => {
+    const n = Number(p.cantidad);
+    const emoji = p.tipo === 'pechos' ? '🍗' : p.tipo === 'piernas' ? '🦵' : '🍱';
+    const label = p.tipo === 'mixto' ? (n === 1 ? 'porción' : 'porciones') : p.tipo;
+    return `${emoji} ${n} ${label}`;
+  }).join(' · ');
+}
+
+function buildPhoneSVG() {
+  return `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.61 21 3 13.39 3 4c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>`;
+}
+
+function buildWASVG() {
+  return `<svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`;
+}
+
+function renderRoute() {
+  const container = document.getElementById('cards-container');
+  const clients = routeData.clients;
+
+  // Hero
+  document.getElementById('heroEntregas').textContent = clients.length;
+  document.getElementById('heroPorciones').textContent = totalPorciones(clients);
+  document.getElementById('heroInicio').textContent = routeData.inicio;
+  const pend = clients.length - Object.keys(done).length;
+  document.getElementById('pendCount').textContent = pend;
+  document.getElementById('pendText').textContent = pend + (pend === 1 ? ' entrega' : ' entregas');
+  document.getElementById('topBarDate').textContent = routeData.fecha;
+  document.getElementById('sectionLabel').textContent = `Paradas del día — ${routeData.fecha}`;
+
+  container.innerHTML = '';
+  clients.forEach((c, idx) => {
+    const num = idx + 1;
+    const isDone = done[c.id];
+    const hasMap = c.mapsEmbed && c.mapsEmbed.trim();
+    const wazeHref = c.wazeUrl || '#';
+    const waHref = `https://wa.me/${c.phone.replace(/\D/g, '')}`;
+
+    const card = document.createElement('div');
+    card.className = 'card' + (isDone ? ' done' : '');
+    card.id = 'card_' + c.id;
+    card.style.animationDelay = (idx * 0.06) + 's';
+
+    card.innerHTML = `
+      <div class="card-head">
+        <div class="stop-num">${num}</div>
+        <div class="client-info">
+          <div class="client-name">${c.name}</div>
+          <div class="client-sub">Entrega programada</div>
+        </div>
+        <div class="time-chip">${c.time}</div>
+      </div>
+      <div class="divider"></div>
+      <div class="card-actions">
+        <div class="phone-tag">${buildPhoneSVG()}<span class="phone-num">+${c.phone.replace(/\D/g,'')}</span></div>
+        <div class="porciones-tag">${porcionesLabel(c.porciones)}</div>
+        <a class="btn-wa" href="${waHref}" target="_blank" rel="noopener">${buildWASVG()}WhatsApp</a>
+      </div>
+      <button class="map-toggle" id="toggle_${c.id}" onclick="toggleMap('${c.id}')">
+        <span class="map-toggle-left">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Ver ubicación en el mapa
+        </span>
+        <svg class="chevron" id="chev_${c.id}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        <a class="btn-waze" href="${wazeHref}" target="_blank" rel="noopener">🚗 Waze</a>
+      </button>
+      ${hasMap ? `<div class="map-wrap" id="map_${c.id}"><iframe src="${c.mapsEmbed}" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Mapa ${c.name}"></iframe></div>` : ''}
+      <button class="check-btn" id="chkbtn_${c.id}" onclick="markDone('${c.id}', ${clients.length})">
+        ${isDone
+          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg> Entregado ✓`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Marcar como entregado`
+        }
+      </button>
+    `;
+    container.appendChild(card);
+
+    if (isDone) {
+      const btn = card.querySelector('.check-btn');
+      btn.style.color = '#9ca3af';
+      btn.style.cursor = 'default';
+    }
+  });
+}
+
+function toggleMap(id) {
+  const wrap = document.getElementById('map_' + id);
+  if (!wrap) return;
+  const chev = document.getElementById('chev_' + id);
+  const isOpen = wrap.classList.contains('open');
+  wrap.classList.toggle('open', !isOpen);
+  chev.classList.toggle('open', !isOpen);
+}
+
+function markDone(id, total) {
+  if (done[id]) return;
+  done[id] = true;
+  const card = document.getElementById('card_' + id);
+  if (card) card.classList.add('done');
+  const btn = document.getElementById('chkbtn_' + id);
+  if (btn) {
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg> Entregado ✓';
+    btn.style.color = '#9ca3af';
+    btn.style.cursor = 'default';
+    btn.onclick = null;
+  }
+  const pend = routeData.clients.length - Object.keys(done).length;
+  document.getElementById('pendCount').textContent = pend;
+  document.getElementById('pendText').textContent = pend + (pend === 1 ? ' entrega' : ' entregas');
+}
+
+// ========== EDITOR ==========
+function openEditor() {
+  document.getElementById('cfgFecha').value = routeData.fecha;
+  document.getElementById('cfgInicio').value = routeData.inicio;
+  renderClientsEditor();
+  document.getElementById('editorOverlay').classList.add('open');
+}
+
+function closeEditor() {
+  document.getElementById('editorOverlay').classList.remove('open');
+}
+
+function tipoOptions(selected) {
+  const opts = [
+    { val: 'mixto', label: '🍱 Porciones (mixto)' },
+    { val: 'pechos', label: '🍗 Pechos' },
+    { val: 'piernas', label: '🦵 Piernas' }
+  ];
+  return opts.map(o => `<option value="${o.val}" ${selected === o.val ? 'selected' : ''}>${o.label}</option>`).join('');
+}
+
+function renderClientsEditor() {
+  const el = document.getElementById('clientsEditor');
+  el.innerHTML = '';
+  routeData.clients.forEach((c, idx) => {
+    const div = document.createElement('div');
+    div.className = 'client-editor';
+    div.id = 'ceditor_' + c.id;
+
+    const porcionesRows = c.porciones.map((p, pi) => `
+      <div class="porcion-row" id="prow_${c.id}_${pi}">
+        <input type="number" min="1" class="field-group input" value="${p.cantidad}" placeholder="Cant." style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:#e2e8f0;font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 8px;" data-cid="${c.id}" data-pi="${pi}" data-field="cantidad">
+        <select style="background:#252b3b;border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:#e2e8f0;font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 8px;flex:1;" data-cid="${c.id}" data-pi="${pi}" data-field="tipo">
+          ${tipoOptions(p.tipo)}
+        </select>
+        <button class="btn-remove-porcion" onclick="removePorcion('${c.id}', ${pi})" title="Eliminar">✕</button>
+      </div>
+    `).join('');
+
+    div.innerHTML = `
+      <div class="client-editor-head" onclick="toggleClientEditor('${c.id}')">
+        <div class="client-editor-num">${idx+1}</div>
+        <div class="client-editor-name">${c.name || 'Cliente ' + (idx+1)}</div>
+        <div class="client-editor-toggle" id="ctoggle_${c.id}">⌄</div>
+      </div>
+      <div class="client-editor-body" id="cbody_${c.id}">
+        <div class="field-row" style="margin-top:10px;">
+          <div class="field-group">
+            <label>Nombre</label>
+            <input type="text" value="${c.name}" placeholder="Nombre cliente" data-cid="${c.id}" data-field="name">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label>Teléfono (con código país, sin +)</label>
+            <input type="text" value="${c.phone}" placeholder="51999000000" data-cid="${c.id}" data-field="phone">
+          </div>
+          <div class="field-group">
+            <label>Hora entrega</label>
+            <input type="text" value="${c.time}" placeholder="10:00 a.m." data-cid="${c.id}" data-field="time">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label>Link Waze</label>
+            <input type="text" value="${c.wazeUrl}" placeholder="https://waze.com/ul?ll=..." data-cid="${c.id}" data-field="wazeUrl">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label>Embed Google Maps (URL del iframe, opcional)</label>
+            <input type="text" value="${c.mapsEmbed}" placeholder="https://www.google.com/maps/embed?pb=..." data-cid="${c.id}" data-field="mapsEmbed">
+          </div>
+        </div>
+        <div class="porciones-editor">
+          <div class="porciones-editor-label">Porciones</div>
+          <div class="porciones-list" id="plist_${c.id}">${porcionesRows}</div>
+          <button class="btn-add-porcion" onclick="addPorcion('${c.id}')">+ Agregar tipo de porción</button>
+        </div>
+        <button class="btn-delete-client" onclick="deleteClient('${c.id}')">🗑 Eliminar este cliente</button>
+      </div>
+    `;
+    el.appendChild(div);
+
+    // Wire up live input changes
+    div.querySelectorAll('input, select').forEach(input => {
+      input.addEventListener('input', () => {
+        const cid = input.dataset.cid;
+        const field = input.dataset.field;
+        const pi = input.dataset.pi;
+        if (!cid) return;
+        const client = routeData.clients.find(x => String(x.id) === String(cid));
+        if (!client) return;
+        if (pi !== undefined && pi !== '') {
+          client.porciones[pi][field] = field === 'cantidad' ? Number(input.value) : input.value;
+        } else {
+          client[field] = input.value;
+        }
+        // Update name shown in editor header live
+        if (field === 'name') {
+          const nameEl = div.querySelector('.client-editor-name');
+          if (nameEl) nameEl.textContent = input.value || 'Cliente';
+        }
+      });
+    });
+  });
+}
+
+function toggleClientEditor(id) {
+  const body = document.getElementById('cbody_' + id);
+  const tog = document.getElementById('ctoggle_' + id);
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  if (tog) tog.classList.toggle('open', !isOpen);
+}
+
+function addPorcion(cid) {
+  const client = routeData.clients.find(c => String(c.id) === String(cid));
+  if (!client) return;
+  client.porciones.push({ cantidad: 1, tipo: 'mixto' });
+  renderClientsEditor();
+  // Re-open the client section
+  const body = document.getElementById('cbody_' + cid);
+  if (body) body.classList.add('open');
+  const tog = document.getElementById('ctoggle_' + cid);
+  if (tog) tog.classList.add('open');
+}
+
+function removePorcion(cid, pi) {
+  const client = routeData.clients.find(c => String(c.id) === String(cid));
+  if (!client || client.porciones.length <= 1) return;
+  client.porciones.splice(pi, 1);
+  renderClientsEditor();
+  const body = document.getElementById('cbody_' + cid);
+  if (body) body.classList.add('open');
+  const tog = document.getElementById('ctoggle_' + cid);
+  if (tog) tog.classList.add('open');
+}
+
+function deleteClient(cid) {
+  if (!confirm('¿Eliminar este cliente?')) return;
+  routeData.clients = routeData.clients.filter(c => String(c.id) !== String(cid));
+  renderClientsEditor();
+}
+
+function addClient() {
+  nextId++;
+  routeData.clients.push({
+    id: nextId,
+    name: '',
+    phone: '51',
+    time: '',
+    wazeUrl: '',
+    mapsEmbed: '',
+    porciones: [{ cantidad: 1, tipo: 'mixto' }]
+  });
+  renderClientsEditor();
+  // Open the new one
+  const body = document.getElementById('cbody_' + nextId);
+  if (body) body.classList.add('open');
+  const tog = document.getElementById('ctoggle_' + nextId);
+  if (tog) tog.classList.add('open');
+  document.getElementById('clientsEditor').lastElementChild?.scrollIntoView({ behavior: 'smooth' });
+}
+
+function applyAndClose() {
+  routeData.fecha = document.getElementById('cfgFecha').value.trim() || routeData.fecha;
+  routeData.inicio = document.getElementById('cfgInicio').value.trim() || routeData.inicio;
+  closeEditor();
+  renderRoute();
+}
+
+// Close on backdrop click
+document.getElementById('editorOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeEditor();
+});
+
+// Init
+renderRoute();
+</script>
+</body>
+</html>
